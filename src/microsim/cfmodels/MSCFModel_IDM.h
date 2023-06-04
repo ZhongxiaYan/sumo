@@ -196,6 +196,12 @@ private:
     /// @brief The IDM delta exponent
     const double myDelta;
 
+    /// @brief The IDM sigma noise standard deviation
+    const double mySigma;
+
+    /// @brief Whether not to use the max version of IDM
+    const bool myNoMax;
+
     /// @brief The IDMM adaptation factor beta
     const double myAdaptationFactor;
 

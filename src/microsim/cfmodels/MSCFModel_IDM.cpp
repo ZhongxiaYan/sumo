@@ -23,6 +23,7 @@
 
 #include "MSCFModel_IDM.h"
 #include <microsim/MSVehicle.h>
+#include <utils/common/RandHelper.h>
 
 //#define DEBUG_V
 //#define DEBUG_INSERTION_SPEED
@@ -38,6 +39,8 @@ MSCFModel_IDM::MSCFModel_IDM(const MSVehicleType* vtype, bool idmm) :
     MSCFModel(vtype),
     myIDMM(idmm),
     myDelta(idmm ? 4.0 : vtype->getParameter().getCFParam(SUMO_ATTR_CF_IDM_DELTA, 4.)),
+    mySigma(vtype->getParameter().getCFParam(SUMO_ATTR_SIGMA, 0.0)),
+    myNoMax(vtype->getParameter().getCFParam(SUMO_ATTR_TMP1, 0.0)),
     myAdaptationFactor(idmm ? vtype->getParameter().getCFParam(SUMO_ATTR_CF_IDMM_ADAPT_FACTOR, 1.8) : 1.0),
     myAdaptationTime(idmm ? vtype->getParameter().getCFParam(SUMO_ATTR_CF_IDMM_ADAPT_TIME, 600.0) : 0.0),
     myIterations(MAX2(1, int(TS / vtype->getParameter().getCFParam(SUMO_ATTR_CF_IDM_STEPPING, .25) + .5))),
@@ -199,7 +202,10 @@ MSCFModel_IDM::_v(const MSVehicle* const veh, const double gap2pred, const doubl
 #endif
     for (int i = 0; i < myIterations; i++) {
         const double delta_v = newSpeed - predSpeed;
-        double s = MAX2(0., newSpeed * headwayTime + newSpeed * delta_v / myTwoSqrtAccelDecel);
+        double s = newSpeed * headwayTime + newSpeed * delta_v / myTwoSqrtAccelDecel;
+        if (!myNoMax) {
+            s = MAX2(0., s);
+        }
         if (respectMinGap) {
             s += myType->getMinGap();
         }
@@ -210,7 +216,7 @@ MSCFModel_IDM::_v(const MSVehicle* const veh, const double gap2pred, const doubl
             std::cout << "   i=" << i << " gap=" << gap << " t=" << myHeadwayTime << " t2=" << headwayTime << " s=" << s << " pow=" << pow(newSpeed / desSpeed, myDelta) << " gapDecel=" << (s * s) / (gap * gap) << " a=" << acc;
         }
 #endif
-        newSpeed = MAX2(0.0, newSpeed + ACCEL2SPEED(acc) / myIterations);
+        newSpeed = MAX2(0.0, newSpeed + ACCEL2SPEED(acc + RandHelper::randNorm(0.0, mySigma)) / myIterations);
 #ifdef DEBUG_V
         if (DEBUG_COND) {
             std::cout << " v2=" << newSpeed << " gLC=" << MSGlobals::gComputeLC << "\n";
